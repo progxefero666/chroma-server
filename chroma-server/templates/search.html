@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h2 class="text-3xl font-semibold mb-6 text-gray-700">Search Database Schema</h2>
+    <p class="mb-6 text-gray-600">
+        Enter keywords to search for table names, column names, data types, or other schema details
+        (e.g., "pdgitem table", "column named id", "VARCHAR type", "foreign key").
+        This searches the DDL information previously loaded into ChromaDB.
+    </p>
+
+    <form id="schemaSearchForm" class="mb-8 p-6 bg-white shadow-md rounded-lg">
+        <div class="mb-4">
+            <label for="searchQuery" class="block text-gray-700 text-sm font-bold mb-2">Search Query:</label>
+            <input type="text" id="searchQuery" name="query"
+                   class="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                   placeholder="e.g., pdgitem, id column, text field">
+        </div>
+
+        <div class="mb-4">
+            <label for="numResults" class="block text-gray-700 text-sm font-bold mb-2">Number of Results:</label>
+            <select id="numResults" name="n_results"
+                    class="shadow appearance-none border rounded w-auto py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+            </select>
+        </div>
+
+        <div class="flex items-center justify-between">
+            <button type="submit"
+                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded focus:outline-none focus:shadow-outline">
+                Search Schema
+            </button>
+        </div>
+    </form>
+
+    <div id="searchResults" class="mt-6">
+        <p class="text-gray-500 italic">Search results will appear here.</p>
+    </div>
+</div>
+
+<script>
+    document.getElementById('schemaSearchForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        const query = document.getElementById('searchQuery').value;
+        const nResults = document.getElementById('numResults').value;
+        const resultsDiv = document.getElementById('searchResults');
+
+        if (!query.trim()) {
+            resultsDiv.innerHTML = '<p class="text-red-500">Please enter a search query.</p>';
+            return;
+        }
+
+        resultsDiv.innerHTML = '<p class="text-blue-500 animate-pulse">Searching schema...</p>';
+
+        try {
+            const response = await fetch(`/api/schema/search?q=${encodeURIComponent(query)}&n_results=${nResults}`);
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: "Unknown error" }));
+                throw new Error(`HTTP error! status: ${response.status} - ${errorData.detail || response.statusText}`);
+            }
+
+            const data = await response.json();
+
+            if (data.results && data.results.length > 0) {
+                let html = `<h3 class="text-xl font-semibold mb-4 text-gray-700">Results for "${escapeHTML(query)}"</h3>`;
+                html += '<ul class="space-y-4">';
+                data.results.forEach(item => {
+                    html += `<li class="p-4 bg-white shadow rounded-lg border border-gray-200">`;
+                    html += `<p class="font-mono text-sm text-gray-600 break-all"><strong>ID:</strong> ${escapeHTML(item.id)}</p>`;
+                    html += `<p class="mt-1 text-gray-800"><strong>Document:</strong> ${highlightQuery(escapeHTML(item.document), query)}</p>`;
+                    if (item.metadata) {
+                        html += `<div class="mt-2 text-xs text-gray-500 bg-gray-50 p-2 rounded">`;
+                        html += `<strong>Metadata:</strong> Type: ${escapeHTML(item.metadata.type)}, Table: ${escapeHTML(item.metadata.table_name)}`;
+                        if(item.metadata.column_name) {
+                             html += `, Column: ${escapeHTML(item.metadata.column_name)}`;
+                        }
+                        if(item.metadata.data_type) {
+                             html += `, Data Type: ${escapeHTML(item.metadata.data_type)}`;
+                        }
+                        html += ` (Source: ${escapeHTML(item.metadata.source)})`;
+                        html += `</div>`;
+                    }
+                    if (item.distance !== null && item.distance !== undefined) {
+                         html += `<p class="mt-1 text-xs text-blue-400"><em>Distance: ${item.distance.toFixed(4)}</em></p>`;
+                    }
+                    html += `</li>`;
+                });
+                html += '</ul>';
+                resultsDiv.innerHTML = html;
+            } else {
+                resultsDiv.innerHTML = `<p class="text-gray-600">No results found for "${escapeHTML(query)}". Try a broader term or ensure schema is loaded.</p>`;
+            }
+
+        } catch (error) {
+            console.error('Search error:', error);
+            resultsDiv.innerHTML = `<p class="text-red-500">Error performing search: ${escapeHTML(error.message)}</p>`;
+        }
+    });
+
+    function escapeHTML(str) {
+        if (str === null || str === undefined) return '';
+        return String(str).replace(/[&<>"']/g, function (match) {
+            return {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[match];
+        });
+    }
+
+    function highlightQuery(text, query) {
+        if (!query || !text) return text;
+        const regex = new RegExp('(' + escapeRegExp(query) + ')', 'gi');
+        return text.replace(regex, '<strong class="bg-yellow-200 text-black">$1</strong>');
+    }
+
+    function escapeRegExp(string) {
+        return string.replace(/[.*+?^{}|[\]\]/g, '\\$&'); // $& means the whole matched string
+    }
+
+</script>
+{% endblock %}

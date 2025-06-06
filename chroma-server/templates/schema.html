@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Database Schema (from DDL)</h2>
+<p>This page displays the table structures as parsed from the provided DDL statements.</p>
+<div id="schema-container">
+    <p>Loading schema...</p>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch("{{ url_for('api.get_schema') }}")
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const container = document.getElementById('schema-container');
+                container.innerHTML = ''; // Clear loading message
+
+                if (Object.keys(data).length === 0) {
+                    container.innerHTML = '<p>No schema data found or schema is empty.</p>';
+                    return;
+                }
+
+                for (const tableName in data) {
+                    const table = data[tableName];
+                    const tableDiv = document.createElement('div');
+                    tableDiv.style.marginBottom = '20px';
+                    tableDiv.style.border = '1px solid #ccc';
+                    tableDiv.style.padding = '10px';
+
+                    const heading = document.createElement('h3');
+                    heading.textContent = tableName;
+                    tableDiv.appendChild(heading);
+
+                    if (table.columns && table.columns.length > 0) {
+                        const columnsUl = document.createElement('ul');
+                        table.columns.forEach(column => {
+                            const li = document.createElement('li');
+                            let colDesc = `${column.name} (${column.type})`;
+                            if (column.not_null) colDesc += ' NOT NULL';
+                            if (column.unique) colDesc += ' UNIQUE';
+                            if (column.primary_key) colDesc += ' (PK)';
+                            li.textContent = colDesc;
+                            columnsUl.appendChild(li);
+                        });
+                        tableDiv.appendChild(columnsUl);
+                    } else {
+                        const p = document.createElement('p');
+                        p.textContent = 'No columns defined for this table.';
+                        tableDiv.appendChild(p);
+                    }
+
+                    // Display Primary Keys if defined at table level
+                    if (table.primary_key && table.primary_key.length > 0) {
+                        const pkP = document.createElement('p');
+                        pkP.innerHTML = `<strong>Primary Key(s):</strong> ${table.primary_key.join(', ')}`;
+                        tableDiv.appendChild(pkP);
+                    }
+
+                    // Display Unique Constraints if defined
+                    if (table.unique_constraints && table.unique_constraints.length > 0) {
+                        const uniqueP = document.createElement('p');
+                        let uniqueText = '<strong>Unique Constraint(s):</strong> ';
+                        table.unique_constraints.forEach(constraint => {
+                            uniqueText += `(${constraint.join(', ')}); `;
+                        });
+                        uniqueP.innerHTML = uniqueText;
+                        tableDiv.appendChild(uniqueP);
+                    }
+
+                    // Display Foreign Keys
+                    if (table.foreign_keys && table.foreign_keys.length > 0) {
+                        const fkP = document.createElement('p');
+                        fkP.innerHTML = '<strong>Foreign Key(s):</strong>';
+                        const fkUl = document.createElement('ul');
+                        table.foreign_keys.forEach(fk => {
+                            const fkLi = document.createElement('li');
+                            fkLi.textContent = `(${fk.columns.join(', ')}) REFERENCES ${fk.references_table}(${fk.references_columns.join(', ')})`;
+                            fkUl.appendChild(fkLi);
+                        });
+                        fkP.appendChild(fkUl);
+                        tableDiv.appendChild(fkP);
+                    }
+
+                    // Display Check Constraints
+                    if (table.check_constraints && table.check_constraints.length > 0) {
+                        const checkP = document.createElement('p');
+                        checkP.innerHTML = '<strong>Check Constraint(s):</strong>';
+                         const checkUl = document.createElement('ul');
+                        table.check_constraints.forEach(chk => {
+                            const chkLi = document.createElement('li');
+                            chkLi.textContent = chk;
+                            checkUl.appendChild(chkLi);
+                        });
+                        checkP.appendChild(checkUl);
+                        tableDiv.appendChild(checkP);
+                    }
+                    container.appendChild(tableDiv);
+                }
+            })
+            .catch(error => {
+                const container = document.getElementById('schema-container');
+                container.innerHTML = `<p style="color: red;">Error loading schema: ${error.message}</p><p>Check the console for more details and ensure the API is running and the /api/schema endpoint is functional.</p>`;
+                console.error('Error fetching schema:', error);
+            });
+    });
+</script>
+{% endblock %}

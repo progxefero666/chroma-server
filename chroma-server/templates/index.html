@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2 class="text-2xl font-semibold mb-4 text-gray-700">Server Status</h2>
+<p class="mb-4">Welcome to the Chroma Server management interface.</p>
+<p>The server is currently running and the API is available.</p>
+
+<h3 class="text-xl font-semibold mb-2 text-gray-600">Quick Links:</h3>
+<ul class="list-disc list-inside mb-4 pl-4">
+    <li class="mb-1"><a href="{{ url_for('api.status', _external=True) }}" target="_blank" class="text-blue-500 hover:text-blue-700 hover:underline">API Status Endpoint</a></li>
+    <li class="mb-1"><a href="{{ url_for('api.get_schema', _external=True) }}" target="_blank" class="text-blue-500 hover:text-blue-700 hover:underline">View Raw Schema (JSON)</a></li>
+    <li class="mb-1"><a href="{{ url_for('api.collection_info', _external=True) }}" target="_blank" class="text-blue-500 hover:text-blue-700 hover:underline">View Collection Info (JSON)</a></li>
+</ul>
+
+<h3>Next Steps:</h3>
+<p>Explore the schema using the 'Schema' link in the sidebar, or try out search functionalities once implemented.</p>
+{% endblock %}
