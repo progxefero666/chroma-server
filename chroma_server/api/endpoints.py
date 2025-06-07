@@ -88,6 +88,29 @@ def search_vector_by_content():
 #     return jsonify({"message": "Placeholder: Add vector data"}), 501
 
 
+# --- NUEVO ENDPOINT MCP ---
+@api_bp.route('/mcp/context/ddl_schema', methods=['GET'])
+def get_mcp_ddl_schema_context():
+    """
+    MCP Endpoint to provide DDL schema context.
+    """
+    current_app.logger.info("MCP: Request for DDL schema context.")
+    try:
+        schema_data = get_parsed_schema() # Reutilizamos la función existente
+        if not schema_data:
+            current_app.logger.warning("MCP: DDL schema context is empty or could not be parsed.")
+            return jsonify({"error": "MCP context: DDL Schema could not be parsed or is empty"}), 500
+        
+        # Por ahora, devolvemos la misma estructura que /api/schema.
+        # Esto podría adaptarse si el cliente MCP espera un formato específico.
+        return jsonify(schema_data)
+    except Exception as e:
+        current_app.logger.error(f"MCP: Error providing DDL schema context: {e}", exc_info=True)
+        return jsonify({"error": "MCP context: An error occurred while retrieving DDL schema", "details": str(e)}), 500
+
+# --- Fin del NUEVO ENDPOINT MCP ---
+
+
 from chroma_server.chroma_utils import populate_schema_in_chromadb, get_particles_collection, parse_ddl_statements, ALL_DDL_STATEMENTS
 from flask import request # Added for request.args
 

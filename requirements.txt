@@ -1,2 +1,4 @@
 Flask
 chromadb
+python-dotenv
+mcp # Asumiendo que este es el paquete para FastMCP

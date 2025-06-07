@@ -1,5 +1,14 @@
 {
   "dependencies": {
     "tailwindcss": "^4.1.8"
+  },
+  "scripts": {
+    "build:css": "postcss ./chroma_server/static/css/src/input.css -o ./chroma_server/static/css/style.css",
+    "watch:css": "postcss ./chroma_server/static/css/src/input.css -o ./chroma_server/static/css/style.css --watch"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "postcss-cli": "^11.0.0"
   }
 }
